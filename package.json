@@ -1,0 +1,44 @@
+{
+  "name": "tradetrack",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "db:seed:demo": "node prisma/seed-demo.mjs",
+    "start": "next start",
+    "lint": "next lint --no-cache",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit --incremental false"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "@sparticuz/chromium": "^148.0.0",
+    "@supabase/supabase-js": "^2.105.4",
+    "@types/bcrypt": "^6.0.0",
+    "bcrypt": "^6.0.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.468.0",
+    "next": "14.2.23",
+    "next-auth": "^4.24.14",
+    "puppeteer-core": "^24.43.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tailwind-merge": "^2.5.5",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.10",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "14.2.23",
+    "postcss": "^8.4.49",
+    "prisma": "^5.22.0",
+    "tailwindcss": "^3.4.16",
+    "tailwindcss-animate": "^1.0.7",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.9"
+  }
+}

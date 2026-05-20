@@ -1,0 +1,406 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Plan {
+  FREE
+  STARTER
+  PRO
+}
+
+enum OrgMemberRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+}
+
+enum JobStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  INVOICED
+  CANCELLED
+}
+
+enum QuoteStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PARTIAL
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum DocumentFolder {
+  CONTRACTS
+  CERTIFICATIONS
+  BILLS_RECEIPTS
+  OTHER
+}
+
+enum ReminderType {
+  INVOICE_DAY_7
+  INVOICE_DAY_14
+  INVOICE_OVERDUE
+  QUOTE_FOLLOWUP
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String?
+  name          String
+  avatarUrl     String?
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  memberships OrganizationMember[]
+  invitesSent OrganizationInvite[] @relation("InviteSender")
+  sessions    Session[]
+  accounts    Account[]
+
+  @@map("users")
+}
+
+model Organization {
+  id             String  @id @default(cuid())
+  name           String
+  slug           String  @unique
+  logoUrl        String?
+  phone          String?
+  email          String?
+  address        String?
+  registrationNo String?
+  website        String?
+
+  defaultPaymentTerms        Int     @default(14)
+  defaultTaxRate             Float   @default(0)
+  defaultPaymentInstructions String?
+  defaultQuoteExpiry         Int     @default(7)
+  invoicePrefix              String  @default("INV-")
+  quotePrefix                String  @default("QT-")
+  invoiceNextNumber          Int     @default(1)
+  quoteNextNumber            Int     @default(1)
+
+  reminderDay7    Boolean @default(true)
+  reminderDay14   Boolean @default(true)
+  reminderOverdue Boolean @default(true)
+
+  plan                 Plan      @default(FREE)
+  isSuspended          Boolean   @default(false)
+  stripeCustomerId     String?   @unique
+  stripeSubscriptionId String?   @unique
+  planExpiresAt        DateTime?
+  storageUsedBytes     BigInt    @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members         OrganizationMember[]
+  invites         OrganizationInvite[]
+  clients         Client[]
+  jobs            Job[]
+  quotes          Quote[]
+  invoices        Invoice[]
+  invoicePayments InvoicePayment[]
+  documents       Document[]
+  reminders       Reminder[]
+  emailLogs       EmailLog[]
+
+  @@map("organizations")
+}
+
+model OrganizationMember {
+  id             String        @id @default(cuid())
+  organizationId String
+  userId         String
+  role           OrgMemberRole @default(MEMBER)
+  joinedAt       DateTime      @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([organizationId])
+  @@index([userId])
+  @@map("organization_members")
+}
+
+model OrganizationInvite {
+  id             String        @id @default(cuid())
+  organizationId String
+  email          String
+  role           OrgMemberRole @default(MEMBER)
+  token          String        @unique @default(cuid())
+  status         InviteStatus  @default(PENDING)
+  sentById       String
+  expiresAt      DateTime
+  createdAt      DateTime      @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  sentBy       User         @relation("InviteSender", fields: [sentById], references: [id])
+
+  @@index([organizationId])
+  @@index([token])
+  @@map("organization_invites")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model Client {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  email          String?
+  phone          String?
+  address        String?
+  jobType        String?
+  notes          String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  jobs         Job[]
+  quotes       Quote[]
+  invoices     Invoice[]
+  documents    Document[]
+
+  @@index([organizationId])
+  @@map("clients")
+}
+
+model Job {
+  id              String    @id @default(cuid())
+  organizationId  String
+  clientId        String
+  title           String
+  description     String?
+  status          JobStatus @default(SCHEDULED)
+  scheduledAt     DateTime?
+  completedAt     DateTime?
+  location        String?
+  durationMinutes Int?
+  materials       String?
+  notes           String?
+  photoUrls       String[]
+  invoiceId       String?   @unique
+  quoteId         String?   @unique
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  client       Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  invoice      Invoice?     @relation(fields: [invoiceId], references: [id])
+  quote        Quote?       @relation(fields: [quoteId], references: [id])
+
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@map("jobs")
+}
+
+model Quote {
+  id             String      @id @default(cuid())
+  organizationId String
+  clientId       String
+  quoteNumber    String
+  status         QuoteStatus @default(DRAFT)
+  issueDate      DateTime    @default(now())
+  expiryDate     DateTime?
+  lineItems      Json
+  subtotal       Float
+  taxRate        Float       @default(0)
+  taxAmount      Float       @default(0)
+  total          Float
+  notes          String?
+  pdfUrl         String?
+  convertedAt    DateTime?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  client       Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  jobs         Job[]
+
+  @@unique([organizationId, quoteNumber])
+  @@index([organizationId])
+  @@map("quotes")
+}
+
+model Invoice {
+  id                  String        @id @default(cuid())
+  organizationId      String
+  clientId            String
+  invoiceNumber       String
+  status              InvoiceStatus @default(DRAFT)
+  issueDate           DateTime      @default(now())
+  dueDate             DateTime?
+  lineItems           Json
+  subtotal            Float
+  taxRate             Float         @default(0)
+  taxAmount           Float         @default(0)
+  total               Float
+  amountPaid          Float         @default(0)
+  balance             Float
+  notes               String?
+  paymentInstructions String?
+  pdfUrl              String?
+  sentAt              DateTime?
+  paidAt              DateTime?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  client       Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  job          Job?
+  payments     InvoicePayment[]
+  reminders    Reminder[]
+
+  @@unique([organizationId, invoiceNumber])
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@map("invoices")
+}
+
+model InvoicePayment {
+  id             String   @id @default(cuid())
+  organizationId String
+  invoiceId      String
+  amount         Float
+  method         String?
+  reference      String?
+  paidAt         DateTime @default(now())
+  notes          String?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invoice      Invoice      @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([invoiceId])
+  @@map("invoice_payments")
+}
+
+model Document {
+  id             String         @id @default(cuid())
+  organizationId String
+  clientId       String?
+  filename       String
+  originalName   String
+  folder         DocumentFolder @default(OTHER)
+  mimeType       String
+  sizeBytes      BigInt
+  storageKey     String
+  uploadedAt     DateTime       @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  client       Client?      @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@map("documents")
+}
+
+model Reminder {
+  id             String       @id @default(cuid())
+  organizationId String
+  invoiceId      String
+  type           ReminderType
+  scheduledAt    DateTime
+  sentAt         DateTime?
+  failed         Boolean      @default(false)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invoice      Invoice      @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([scheduledAt, sentAt])
+  @@map("reminders")
+}
+
+model EmailLog {
+  id             String   @id @default(cuid())
+  organizationId String
+  to             String
+  subject        String
+  type           String
+  resendId       String?
+  status         String   @default("sent")
+  error          String?
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@map("email_logs")
+}
+
+model AdminAction {
+  id         String   @id @default(cuid())
+  adminId    String
+  action     String
+  targetType String
+  targetId   String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([adminId])
+  @@map("admin_actions")
+}
