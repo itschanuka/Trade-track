@@ -6,6 +6,7 @@
 
 # testing
 /coverage
+.vitest-cache/
 
 # next.js
 /.next/
@@ -15,19 +16,7 @@
 /build
 /dist
 
-# misc
-.DS_Store
-Thumbs.db
-*.pem
-
-# debug logs
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-*.log
-
-# local env files - NEVER PUSH
+# environment variables - NEVER COMMIT
 .env
 .env.local
 .env.development.local
@@ -40,9 +29,8 @@ pnpm-debug.log*
 
 # typescript
 *.tsbuildinfo
-next-env.d.ts
 
-# Python worker local files
+# python local files
 .venv/
 venv/
 env/
@@ -60,14 +48,25 @@ __pycache__/
 prisma/dev.db
 prisma/dev.db-journal
 
-# local docs / internal Codex notes
-docs/
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
 
-# old parked/local folders
-_later-phase-hold/
-
-# editor
+# OS / editor
+.DS_Store
+Thumbs.db
 .vscode/
 .idea/
-.vitest-cache/
+
+# local/internal project notes
+docs/
 AGENTS.md
+_later-phase-hold/
+
+# certificates / keys
+*.pem
+*.key
+*.cert

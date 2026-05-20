@@ -17,7 +17,7 @@ export default function OnboardingCompletePage({ searchParams }: OnboardingCompl
         <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">TradeTrack</p>
         <h1 className="text-3xl font-bold text-slate-950">Organization created</h1>
         <p className="text-sm text-slate-600">
-          Your tenant workspace is ready. Tenant routing lands in the next phase, so this link may
+          Your tenant workspace is ready. Your workspace is ready., so this link may
           resolve fully once routing middleware is enabled.
         </p>
         <Link
